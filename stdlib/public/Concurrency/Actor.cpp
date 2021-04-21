@@ -48,8 +48,11 @@
 #include <sys/syscall.h>
 #endif
 
-#if HAVE_PTHREAD_H
+#if __has_include(<pthread.h>)
 #include <pthread.h>
+#endif
+#if __has_include(<pthread_np.h>)
+#include <pthread_np.h>
 #endif
 
 #if defined(_WIN32)
