@@ -92,6 +92,51 @@ function(get_bootstrapping_path path_var orig_path bootstrapping)
   endif()
 endfunction()
 
+# Determine the directory holding the host-platform Swift runtime libraries of
+# an *external* toolchain rooted at `swift_dir` (e.g. the host toolchain used
+# in HOSTTOOLS bootstrapping mode).
+#
+# The layout below lib/swift may differ between toolchain versions (see
+# SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR), so ask that toolchain's compiler via
+# `-print-target-info` rather than assuming our own layout. Fall back to our
+# versioned layout if it exists there, and finally to the unversioned
+# lib/swift/<platform>.
+function(swift_get_external_toolchain_runtime_lib_dir swift_dir result_var_name)
+  set(result "")
+
+  set(swiftc "${swift_dir}/bin/swiftc${CMAKE_EXECUTABLE_SUFFIX}")
+  if(EXISTS "${swiftc}")
+    set(target_info_command "${swiftc}" -print-target-info)
+    if(SWIFT_HOST_TRIPLE)
+      list(APPEND target_info_command -target "${SWIFT_HOST_TRIPLE}")
+    endif()
+    execute_process(COMMAND ${target_info_command}
+      OUTPUT_VARIABLE target_info
+      ERROR_QUIET
+      RESULT_VARIABLE ec)
+    if(ec EQUAL 0)
+      string(JSON result ERROR_VARIABLE json_error
+             GET "${target_info}" paths runtimeLibraryPaths 0)
+      if(json_error OR NOT IS_DIRECTORY "${result}")
+        set(result "")
+      endif()
+    endif()
+  endif()
+
+  if(NOT result)
+    set(versioned
+        "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_RUNTIME_LIB_SUBDIR}")
+    if(IS_DIRECTORY "${versioned}")
+      set(result "${versioned}")
+    else()
+      set(result
+          "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+    endif()
+  endif()
+
+  set("${result_var_name}" "${result}" PARENT_SCOPE)
+endfunction()
+
 # When building the stdlib in bootstrapping, return the swift library path
 # from the previous bootstrapping stage.
 function(get_bootstrapping_swift_lib_dir bs_lib_dir bootstrapping)
@@ -128,7 +173,7 @@ function(get_bootstrapping_swift_lib_dir bs_lib_dir bootstrapping)
         set(swift_dir "${swiftly_dir}/usr")
       endif()
 
-      set(bs_lib_dir "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_RUNTIME_LIB_SUBDIR}")
+      swift_get_external_toolchain_runtime_lib_dir("${swift_dir}" bs_lib_dir)
     endif()
   endif()
   set(bs_lib_dir ${bs_lib_dir} PARENT_SCOPE)

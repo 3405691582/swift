@@ -42,11 +42,22 @@ static std::optional<Path> getActualModuleMapPath(
 
   StringRef arch = swift::getMajorArchitectureName(triple);
 
+  // Platform subdirectories to try, in order. On platforms that nest the
+  // runtime library directory under the Swift version, fall back to the
+  // unversioned platform directory for components that have not adopted the
+  // versioned layout yet.
+  SmallVector<std::string, 2> platforms{platform};
+  if (platform == swift::getRuntimeLibrarySubdirForTriple(triple) &&
+      swift::platformUsesVersionedRuntimeLibrarySubdir(triple))
+    platforms.push_back(swift::getPlatformNameForTriple(triple).str());
+
   Path result;
 
-  if (!Opts.RuntimeResourcePath.empty()) {
+  for (const auto &platformSubdir : platforms) {
+    if (Opts.RuntimeResourcePath.empty())
+      break;
     result.assign(Opts.RuntimeResourcePath);
-    llvm::sys::path::append(result, platform);
+    llvm::sys::path::append(result, platformSubdir);
     if (isArchSpecific) {
       llvm::sys::path::append(result, arch);
     }
@@ -66,10 +77,12 @@ static std::optional<Path> getActualModuleMapPath(
   }
 
   StringRef SDKPath = Opts.getSDKPath();
-  if (!SDKPath.empty()) {
+  for (const auto &platformSubdir : platforms) {
+    if (SDKPath.empty())
+      break;
     result.assign(SDKPath);
     llvm::sys::path::append(result, "usr", "lib", "swift");
-    llvm::sys::path::append(result, platform);
+    llvm::sys::path::append(result, platformSubdir);
     if (isArchSpecific) {
       llvm::sys::path::append(result, arch);
     }

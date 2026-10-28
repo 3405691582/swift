@@ -1671,6 +1671,17 @@ void ToolChain::getResourceDirPath(SmallVectorImpl<char> &resourceDirPath,
 void ToolChain::getSecondaryResourceDirPath(
     SmallVectorImpl<char> &secondaryResourceDirPath,
     StringRef primaryPath) const {
+  if (platformUsesVersionedRuntimeLibrarySubdir(getTriple())) {
+    // For platforms that nest the runtime library directory under the Swift
+    // version, the secondary path is the unversioned platform directory, so
+    // that libraries installed by components that have not adopted the
+    // versioned layout yet are still found.
+    secondaryResourceDirPath.append(primaryPath.begin(), primaryPath.end());
+    // Remove '/<version>'.
+    llvm::sys::path::remove_filename(secondaryResourceDirPath);
+    return;
+  }
+
   if (!tripleIsMacCatalystEnvironment(getTriple()))
     return;
 

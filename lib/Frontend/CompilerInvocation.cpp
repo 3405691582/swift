@@ -252,6 +252,22 @@ updateRuntimeLibraryPaths(SearchPathOptions &SearchPathOpts,
 
   llvm::sys::path::append(LibPath, LibSubDir);
   SearchPathOpts.RuntimeLibraryPaths.push_back(std::string(LibPath.str()));
+
+  // On platforms that nest the runtime library directory under the Swift
+  // version, fall back to the unversioned platform directory so that
+  // libraries installed by components that have not adopted the versioned
+  // layout yet are still found.
+  bool HasUnversionedFallback =
+      platformUsesVersionedRuntimeLibrarySubdir(Triple) &&
+      LibSubDir == getRuntimeLibrarySubdirForTriple(Triple);
+  llvm::SmallString<128> UnversionedLibPath;
+  if (HasUnversionedFallback) {
+    UnversionedLibPath = SearchPathOpts.RuntimeResourcePath;
+    llvm::sys::path::append(UnversionedLibPath, getPlatformNameForTriple(Triple));
+    SearchPathOpts.RuntimeLibraryPaths.push_back(
+        std::string(UnversionedLibPath.str()));
+  }
+
   if (Triple.isOSDarwin())
     SearchPathOpts.RuntimeLibraryPaths.push_back(DARWIN_OS_LIBRARY_PATH);
 
@@ -272,6 +288,13 @@ updateRuntimeLibraryPaths(SearchPathOptions &SearchPathOpts,
     RuntimeLibraryImportPaths.push_back(std::string(LibPath.str()));
   }
 
+  if (HasUnversionedFallback) {
+    RuntimeLibraryImportPaths.push_back(std::string(UnversionedLibPath.str()));
+    llvm::sys::path::append(UnversionedLibPath,
+                            swift::getMajorArchitectureName(Triple));
+    RuntimeLibraryImportPaths.push_back(std::string(UnversionedLibPath.str()));
+  }
+
   if (!SearchPathOpts.SkipSDKImportPaths && !SearchPathOpts.getSDKPath().empty()) {
     const char *swiftDir = FrontendOpts.UseSharedResourceFolder
       ? "swift" : "swift_static";
@@ -289,13 +312,22 @@ updateRuntimeLibraryPaths(SearchPathOptions &SearchPathOpts,
     if (!Triple.isOSDarwin()) {
       // Use the non-architecture suffixed form with directory-layout
       // swiftmodules.
-      llvm::sys::path::append(LibPath, getRuntimeLibrarySubdirForTriple(Triple));
-      RuntimeLibraryImportPaths.push_back(std::string(LibPath.str()));
+      llvm::SmallString<128> SDKLibPath(LibPath);
+      llvm::sys::path::append(SDKLibPath, getRuntimeLibrarySubdirForTriple(Triple));
+      RuntimeLibraryImportPaths.push_back(std::string(SDKLibPath.str()));
+
+      if (platformUsesVersionedRuntimeLibrarySubdir(Triple)) {
+        // Unversioned fallback, as above.
+        SDKLibPath = LibPath;
+        llvm::sys::path::append(SDKLibPath, getPlatformNameForTriple(Triple));
+        RuntimeLibraryImportPaths.push_back(std::string(SDKLibPath.str()));
+      }
 
       // Compatibility with older releases - use the architecture suffixed form
       // for pre-directory-layout multi-architecture layout.  Note that some
       // platforms (e.g. Windows) will use this even with directory layout in
       // older releases.
+      LibPath = SDKLibPath;
       llvm::sys::path::append(LibPath, swift::getMajorArchitectureName(Triple));
     }
     RuntimeLibraryImportPaths.push_back(std::string(LibPath.str()));
