@@ -27,6 +27,12 @@ It requires a Swift 6.2 (or newer) toolchain to be installed on your build machi
 
 Not that changing the bootstrapping mode needs a reconfiguration.
 
+#### `hosttools` builds on hosts with differently named runtime libraries
+
+In `hosttools` mode, all Swift code in the compiler and its host libraries (SwiftCompilerSources, swift-syntax, the macro plugins, `swift-plugin-server`, ...) is compiled by and linked against the *host* toolchain, but the resulting binaries run against the *just-built* Swift runtime. On ELF platforms this relies on the just-built runtime libraries having the same file names (and a compatible ABI) as the host toolchain's, since the `NEEDED` entries of the host-compiled binaries name the host toolchain's libraries. Where that is not the case (e.g. versioned library names, see [swiftlang/swift#90405](https://github.com/swiftlang/swift/issues/90405)), the just-built `swift-frontend` cannot be executed outside the standard library build (which runs it with `LD_LIBRARY_PATH` pointing at the host runtime), and the build breaks as soon as anything else runs it.
+
+As a stop-gap, `--extra-cmake-options=-DSWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME=FALLBACK` adds the host toolchain's runtime directory to the RPATH of all such binaries, *after* the just-built runtime. This keeps the build working, but bakes an absolute path into the host toolchain into the binaries, so the result should not be shipped.
+
 #### Using a locally built Swift toolchain
 
 If you do not want to install a nightly Swift toolchain, or you need to debug Swift code within SwiftCompilerSources, you can build the Swift toolchain in `bootstrapping-with-hostlibs` mode on your local machine once, and then use this toolchain to iterate on your changes with the `hosttools` mode:

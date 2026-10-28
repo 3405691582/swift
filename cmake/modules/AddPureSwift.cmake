@@ -197,12 +197,16 @@ function(_set_pure_swift_link_flags name relpath_to_lib_dir)
       $<$<COMPILE_LANGUAGE:Swift>:-no-toolchain-stdlib-rpath>
     )
 
+    # At runtime, use swiftCore in the current just-built toolchain.
+    # NOTE: This relies on the ABI being the same as the builder.
+    set(swift_runtime_rpath
+      "$ORIGIN/${relpath_to_lib_dir}swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+    # Optionally also search the host toolchain's runtime, which is the one
+    # this target's Swift code was compiled and linked against.
+    swift_add_hosttools_runtime_rpath(swift_runtime_rpath)
+
     set_property(TARGET ${name}
-      APPEND PROPERTY INSTALL_RPATH
-        # At runtime, use swiftCore in the current just-built toolchain.
-        # NOTE: This relies on the ABI being the same as the builder.
-        "$ORIGIN/${relpath_to_lib_dir}swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}"
-    )
+      APPEND PROPERTY INSTALL_RPATH "${swift_runtime_rpath}")
     # NOTE: At this point we don't have any pure swift executables/shared
     # libraries required for building runtime/stdlib. So we don't need to add
     # RPATH to the builder's runtime.

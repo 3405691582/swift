@@ -400,6 +400,31 @@ else()
   set(SWIFT_BUILD_SWIFT_SYNTAX OFF)
 endif()
 
+set(SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME OFF CACHE STRING [=[
+  In HOSTTOOLS bootstrapping mode on ELF platforms, every host tool and
+  library that contains Swift code (the compiler itself, the swift-syntax
+  libraries, macro plugins, swift-plugin-server, ...) is compiled by and
+  linked against the host toolchain, so its NEEDED entries name the host
+  toolchain's runtime libraries, but it is configured to run against the
+  just-built runtime via RPATH. That only works if the just-built runtime
+  libraries have the same file names (and a compatible ABI) as the host
+  toolchain's. This setting additionally adds the host toolchain's runtime
+  directory to the RPATH of those binaries:
+      OFF:      do not (the default).
+      FALLBACK: after the just-built runtime. The just-built runtime is still
+                preferred where the names match; the host runtime is only used
+                for libraries that cannot be found in the just-built one. This
+                avoids build breaks on hosts whose runtime library names differ
+                from the ones being built (e.g. versioned library names), at
+                the cost of baking an absolute path into the host toolchain
+                into the binaries. Not suitable for a toolchain to be shipped.
+      PREFER:   before the just-built runtime, so the binaries run against the
+                runtime they were actually compiled against. Intended for the
+                first stage of a two-stage build, whose products are only used
+                to build the second stage and are never installed.
+  ]=])
+set_property(CACHE SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME PROPERTY STRINGS OFF FALLBACK PREFER)
+
 option(BRIDGING_MODE [=[
 How swift-C++ bridging code is compiled:
     INLINE:       uses full swift C++ interop and briding functions are inlined
@@ -1126,6 +1151,24 @@ if(SWIFT_COMPILER_SWIFT_SOURCES_ENABLED)
     endif()
   endif()
   add_definitions(-DSWIFT_BUILD_SWIFT_SYNTAX)
+endif()
+
+if(SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME)
+  if(NOT SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME MATCHES "^(FALLBACK|PREFER)$")
+    message(FATAL_ERROR
+      "SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME must be OFF, FALLBACK or PREFER "
+      "(got '${SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME}')")
+  endif()
+  if(NOT BOOTSTRAPPING_MODE STREQUAL "HOSTTOOLS")
+    message(FATAL_ERROR
+      "SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME requires BOOTSTRAPPING_MODE=HOSTTOOLS "
+      "(got '${BOOTSTRAPPING_MODE}')")
+  endif()
+  if(NOT SWIFT_HOST_VARIANT_SDK MATCHES "LINUX|ANDROID|OPENBSD|FREEBSD")
+    message(WARNING
+      "SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME is only meaningful on ELF hosts; ignoring")
+    set(SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME OFF)
+  endif()
 endif()
 
 if(SWIFT_BUILD_SARIF)

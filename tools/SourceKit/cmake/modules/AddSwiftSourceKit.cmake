@@ -109,22 +109,7 @@ function(add_sourcekit_swift_runtime_link_flags target path HAS_SWIFT_MODULES)
       if(ASKD_BOOTSTRAPPING_MODE MATCHES "HOSTTOOLS")
         # At build time and run time, link against the swift libraries in the
         # installed host toolchain.
-        get_filename_component(swift_bin_dir ${SWIFT_EXEC_FOR_SWIFT_MODULES} DIRECTORY)
-        get_filename_component(swift_dir ${swift_bin_dir} DIRECTORY)
-
-        # Detect and handle swiftly-managed hosts.
-        if(swift_bin_dir MATCHES ".*/swiftly/bin")
-          execute_process(COMMAND swiftly use --print-location
-            OUTPUT_VARIABLE swiftly_dir
-            ERROR_VARIABLE err)
-          if(err)
-            message(SEND_ERROR "Failed to find swiftly Swift compiler")
-          endif()
-          string(STRIP "${swiftly_dir}" swiftly_dir)
-          set(swift_dir "${swiftly_dir}/usr")
-        endif()
-
-        set(host_lib_dir "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+        swift_get_hosttools_runtime_lib_dir(host_lib_dir)
       else()
         set(host_lib_dir "${SWIFTLIB_DIR}/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
       endif()
@@ -138,7 +123,13 @@ function(add_sourcekit_swift_runtime_link_flags target path HAS_SWIFT_MODULES)
       target_link_directories(${target} PRIVATE ${host_lib_arch_dir})
 
       file(RELATIVE_PATH relative_rtlib_path "${path}" "${SWIFTLIB_DIR}/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
-      list(APPEND RPATH_LIST "$ORIGIN/${relative_rtlib_path}")
+      set(swift_runtime_rpath "$ORIGIN/${relative_rtlib_path}")
+      if(ASKD_BOOTSTRAPPING_MODE MATCHES "HOSTTOOLS")
+        # Optionally also search the host toolchain's runtime, which is the
+        # one this target's Swift code was compiled and linked against.
+        swift_add_hosttools_runtime_rpath(swift_runtime_rpath)
+      endif()
+      list(APPEND RPATH_LIST ${swift_runtime_rpath})
       # NOTE: SourceKit components are NOT executed before stdlib is built.
       # So there's no need to add RUNPATH to builder's runtime libraries.
 

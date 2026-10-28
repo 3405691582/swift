@@ -92,6 +92,62 @@ function(get_bootstrapping_path path_var orig_path bootstrapping)
   endif()
 endfunction()
 
+# Return the directory containing the Swift runtime libraries (libswiftCore
+# etc.) of the host toolchain, i.e. the toolchain whose compiler is used to
+# build the Swift code in the host tools in HOSTTOOLS bootstrapping mode.
+#
+# This is the runtime those tools are *compiled against*. On ELF platforms,
+# they are nevertheless configured to *run against* the just-built runtime in
+# the build/install tree (see `_add_swift_runtime_link_flags`), which only
+# works as long as the just-built runtime has the same file names and a
+# compatible ABI. See SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME.
+function(swift_get_hosttools_runtime_lib_dir result_var_name)
+  if(SWIFT_PATH_TO_SWIFT_SDK)
+    set(swift_dir "${SWIFT_PATH_TO_SWIFT_SDK}/usr")
+  else()
+    set(swift_exec "${SWIFT_EXEC_FOR_SWIFT_MODULES}")
+    if(NOT swift_exec)
+      set(swift_exec "${CMAKE_Swift_COMPILER}")
+    endif()
+    get_filename_component(swift_bin_dir "${swift_exec}" DIRECTORY)
+    get_filename_component(swift_dir "${swift_bin_dir}" DIRECTORY)
+
+    # Detect and handle swiftly-managed hosts.
+    if(swift_bin_dir MATCHES ".*/swiftly/bin")
+      execute_process(COMMAND swiftly use --print-location
+        OUTPUT_VARIABLE swiftly_dir
+        ERROR_VARIABLE err)
+      if(err)
+        message(SEND_ERROR "Failed to find swiftly Swift compiler")
+      endif()
+      string(STRIP "${swiftly_dir}" swiftly_dir)
+      set(swift_dir "${swiftly_dir}/usr")
+    endif()
+  endif()
+
+  set("${result_var_name}"
+      "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}"
+      PARENT_SCOPE)
+endfunction()
+
+# Insert the host toolchain's runtime directory into `rpath_list_var`, a list
+# of RPATH entries that starts with the just-built runtime directory, according
+# to SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME (see the top-level CMakeLists.txt):
+# after it for FALLBACK, before it for PREFER. No-op when it is OFF.
+function(swift_add_hosttools_runtime_rpath rpath_list_var)
+  if(NOT SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME)
+    return()
+  endif()
+  swift_get_hosttools_runtime_lib_dir(host_lib_dir)
+  set(rpath_list "${${rpath_list_var}}")
+  if(SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME STREQUAL "PREFER")
+    list(PREPEND rpath_list "${host_lib_dir}")
+  else()
+    list(APPEND rpath_list "${host_lib_dir}")
+  endif()
+  set("${rpath_list_var}" "${rpath_list}" PARENT_SCOPE)
+endfunction()
+
 # When building the stdlib in bootstrapping, return the swift library path
 # from the previous bootstrapping stage.
 function(get_bootstrapping_swift_lib_dir bs_lib_dir bootstrapping)
@@ -113,22 +169,7 @@ function(get_bootstrapping_swift_lib_dir bs_lib_dir bootstrapping)
       # For building stdlib, use stdlib in the builder's resource directory
       # because the runtime may not be built yet.
       # FIXME: This assumes the ABI hasn't changed since the builder.
-      get_filename_component(swift_bin_dir ${CMAKE_Swift_COMPILER} DIRECTORY)
-      get_filename_component(swift_dir ${swift_bin_dir} DIRECTORY)
-
-      # Detect and handle swiftly-managed hosts.
-      if(swift_bin_dir MATCHES ".*/swiftly/bin")
-        execute_process(COMMAND swiftly use --print-location
-          OUTPUT_VARIABLE swiftly_dir
-          ERROR_VARIABLE err)
-        if(err)
-          message(SEND_ERROR "Failed to find swiftly Swift compiler")
-        endif()
-        string(STRIP "${swiftly_dir}" swiftly_dir)
-        set(swift_dir "${swiftly_dir}/usr")
-      endif()
-
-      set(bs_lib_dir "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+      swift_get_hosttools_runtime_lib_dir(bs_lib_dir)
     endif()
   endif()
   set(bs_lib_dir ${bs_lib_dir} PARENT_SCOPE)

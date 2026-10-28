@@ -17,7 +17,11 @@ function(includeSwiftSyntax)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${SWIFT_HOST_LIBRARIES_DEST_DIR}/compiler")
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${SWIFT_HOST_LIBRARIES_DEST_DIR}/compiler")
   if(SWIFT_HOST_VARIANT_SDK MATCHES "LINUX|ANDROID|OPENBSD|FREEBSD")
-    set(SWIFT_HOST_LIBRARIES_RPATH "$ORIGIN;$ORIGIN/../../${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+    set(swift_runtime_rpath "$ORIGIN/../../${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+    # Optionally also search the host toolchain's runtime, which is the one
+    # these libraries are compiled and linked against.
+    swift_add_hosttools_runtime_rpath(swift_runtime_rpath)
+    set(SWIFT_HOST_LIBRARIES_RPATH "$ORIGIN;${swift_runtime_rpath}")
   endif()
 
   # Add unique ABI prefix to swift-syntax libraries so that compiler libraries (e.g. sourcekitdInProc)
