@@ -703,11 +703,16 @@ def create_argument_parser():
            help='A semi-colon split list of llvm components to install')
 
     option('--bootstrapping', store('bootstrapping_mode'),
-           choices=['hosttools', 'bootstrapping', 'bootstrapping-with-hostlibs'],
+           choices=['hosttools', 'hosttools-2stage', 'bootstrapping',
+                    'bootstrapping-with-hostlibs'],
            help='The bootstrapping build mode for swift compiler modules. '
-                'Available modes: `hosttools`, `bootstrapping`, '
-                '`bootstrapping-with-hostlibs`, `crosscompile`, and '
-                '`crosscompile-with-hostlibs`')
+                'Available modes: `hosttools`, `hosttools-2stage`, '
+                '`bootstrapping`, `bootstrapping-with-hostlibs`, '
+                '`crosscompile`, and `crosscompile-with-hostlibs`. '
+                '`hosttools-2stage` performs a `hosttools` build and then '
+                'rebuilds the compiler with it, so that no Swift code in the '
+                'final toolchain is compiled by or linked against the host '
+                'toolchain.')
 
     option('--use-linker', store('use_linker'),
            choices=['gold', 'lld'],

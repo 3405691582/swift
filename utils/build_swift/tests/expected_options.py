@@ -950,7 +950,7 @@ EXPECTED_OPTIONS = [
 
     SetOption('--bootstrapping', dest='bootstrapping_mode'),
     ChoicesOption('--bootstrapping', dest='bootstrapping_mode',
-                  choices=['hosttools', 'bootstrapping',
+                  choices=['hosttools', 'hosttools-2stage', 'bootstrapping',
                            'bootstrapping-with-hostlibs']),
 
     # NOTE: We'll need to manually test the behavior of these since they

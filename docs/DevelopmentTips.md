@@ -33,6 +33,8 @@ In `hosttools` mode, all Swift code in the compiler and its host libraries (Swif
 
 As a stop-gap, `--extra-cmake-options=-DSWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME=FALLBACK` adds the host toolchain's runtime directory to the RPATH of all such binaries, *after* the just-built runtime. This keeps the build working, but bakes an absolute path into the host toolchain into the binaries, so the result should not be shipped.
 
+The proper fix is a two-stage build: `utils/build-script --bootstrapping=hosttools-2stage`. Stage 1 (`build/<preset>/swift_stage1-<host>`) is a regular `hosttools` build whose host tools are configured to run against the host toolchain's runtime (`SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME=PREFER`); it is never tested or installed. The final `swift` product is then a `hosttools` build that uses the stage 1 compiler as its host Swift compiler, so every Swift binary in it is compiled by, linked against, and run against the same sources, and no reference to the host toolchain remains.
+
 #### Using a locally built Swift toolchain
 
 If you do not want to install a nightly Swift toolchain, or you need to debug Swift code within SwiftCompilerSources, you can build the Swift toolchain in `bootstrapping-with-hostlibs` mode on your local machine once, and then use this toolchain to iterate on your changes with the `hosttools` mode:

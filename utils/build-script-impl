@@ -67,7 +67,7 @@ KNOWN_SETTINGS=(
     build-runtime-with-host-compiler              ""                "use the host c++ compiler to build everything"
     build-stdlib-deployment-targets               "all"             "space-separated list that filters which of the configured targets to build the Swift standard library for, or 'all'"
     build-toolchain-only                          ""                "If set, only build the necessary tools to build an external toolchain"
-    bootstrapping                                 ""                "the bootstrapping build mode for the swift compiler modules"
+    bootstrapping                                 ""                "the bootstrapping build mode for the swift compiler modules; 'hosttools-2stage' does a 'hosttools' build and then rebuilds the compiler with it"
     cmake-generator                               "Unix Makefiles"  "kind of build system to generate; see output of 'cmake --help' for choices"
     llvm-num-parallel-lto-link-jobs               ""                "The number of parallel link jobs to use when compiling llvm"
     reconfigure                                   ""                "force a CMake configuration run even if CMakeCache.txt already exists"
@@ -1316,8 +1316,37 @@ SWIFT_PATH_TO_STRING_PROCESSING_SOURCE="${WORKSPACE}/swift-experimental-string-p
 SWIFTSYNTAX_SOURCE_DIR="${WORKSPACE}/swift-syntax"
 SWIFT_SYNTAX_SOURCE_DIR="${WORKSPACE}/swift-syntax"
 
+# A two-stage "hosttools" build.
+#
+# In the (single stage) "hosttools" mode, all Swift code in the compiler and
+# its host libraries (SwiftCompilerSources, swift-syntax, the macro plugins,
+# swift-plugin-server, ...) is compiled by, and linked against, the host
+# toolchain, while the resulting binaries are set up to run against the
+# just-built Swift runtime. That only works as long as the just-built runtime
+# libraries have the same file names (and a compatible ABI) as the host
+# toolchain's runtime, which is not the case e.g. on platforms that embed a
+# version in shared library names (see https://github.com/swiftlang/swift/issues/90405).
+#
+# "hosttools-2stage" fixes this by building the compiler twice: stage 1 is a
+# regular "hosttools" build whose host tools run against the host toolchain's
+# runtime (SWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME) and is never installed; the
+# final "swift" product is then a "hosttools" build that uses the stage 1
+# compiler as its host Swift compiler, so that every Swift binary in the final
+# toolchain is compiled by, linked against and run against the same sources.
+SWIFT_TWO_STAGE_BUILD=
+if [[ "${BOOTSTRAPPING}" == "hosttools-2stage" ]]; then
+    BOOTSTRAPPING=hosttools
+    SWIFT_TWO_STAGE_BUILD=1
+fi
+SWIFT_STAGE1_SOURCE_DIR="${SWIFT_SOURCE_DIR}"
+
 [[ "${SKIP_BUILD_LIBCXX}" ]] || PRODUCTS+=(libcxx)
-[[ "${SKIP_BUILD_SWIFT}" ]] || PRODUCTS+=(swift)
+if [[ ! "${SKIP_BUILD_SWIFT}" ]]; then
+    if [[ "${SWIFT_TWO_STAGE_BUILD}" ]]; then
+        PRODUCTS+=(swift_stage1)
+    fi
+    PRODUCTS+=(swift)
+fi
 [[ "${SKIP_BUILD_LLDB}" ]] || PRODUCTS+=(lldb)
 [[ "${SKIP_BUILD_LIBDISPATCH}" ]] || PRODUCTS+=(libdispatch)
 [[ "${SKIP_BUILD_STATIC_LIBDISPATCH}" ]] || PRODUCTS+=(libdispatch_static)
@@ -1678,6 +1707,13 @@ for host in "${ALL_HOSTS[@]}"; do
     for product in "${PRODUCTS[@]}"; do
         [[ $(should_execute_action "${host}-${product%%_*}-build") ]] || continue
 
+        # Stage 1 of a two-stage build only exists to provide a host compiler
+        # for the native build of the final "swift" product; cross-compiled
+        # hosts use that final native compiler as their native tools.
+        if [[ "${product}" == "swift_stage1" && $(is_cross_tools_host ${host}) ]]; then
+            continue
+        fi
+
         source_dir_var="$(toupper ${product})_SOURCE_DIR"
         source_dir=${!source_dir_var}
         build_dir=$(build_directory ${host} ${product})
@@ -1703,7 +1739,7 @@ for host in "${ALL_HOSTS[@]}"; do
                 )
                 ;;
 
-            swift)
+            swift|swift_stage1)
 
                 if [[ "${ANDROID_API_LEVEL}" ]]; then
                     cmake_options=(
@@ -1798,6 +1834,36 @@ for host in "${ALL_HOSTS[@]}"; do
                 fi
                 if [[ "${NATIVE_SWIFT_TOOLS_PATH}" ]] ; then
                     native_swift_tools_path="${NATIVE_SWIFT_TOOLS_PATH}"
+                fi
+
+                if [[ "${product}" == "swift_stage1" ]]; then
+                    # Stage 1 of a two-stage build (see SWIFT_TWO_STAGE_BUILD).
+                    # It is built with the host toolchain like a regular
+                    # "hosttools" build, but its host tools run against the
+                    # host toolchain's runtime, so they work regardless of how
+                    # the just-built runtime libraries are named. Only the
+                    # compiler and the standard library are needed from it, so
+                    # skip tests, benchmarks and docs.
+                    build_perf_testsuite_this_time=false
+                    build_tests_this_time=false
+                    cmake_options=(
+                        "${cmake_options[@]}"
+                        -DSWIFT_HOSTTOOLS_RPATH_TO_HOST_RUNTIME:STRING=PREFER
+                        -DSWIFT_INCLUDE_TEST_BINARIES:BOOL=FALSE
+                        -DSWIFT_INCLUDE_DOCS:BOOL=FALSE
+                    )
+                elif [[ "${SWIFT_TWO_STAGE_BUILD}" && -z "$(is_cross_tools_host ${host})" ]]; then
+                    # Stage 2 of a two-stage build: use the stage 1 compiler as
+                    # the host Swift compiler. In "hosttools" mode this makes
+                    # all Swift code in the compiler and its host libraries be
+                    # compiled by the stage 1 compiler and linked against the
+                    # stage 1 standard library, whose library names match the
+                    # ones this stage builds and runs against.
+                    stage1_swiftc="$(build_directory_bin ${host} swift_stage1)/swiftc"
+                    cmake_options=(
+                        "${cmake_options[@]}"
+                        -DCMAKE_Swift_COMPILER:PATH="${stage1_swiftc}"
+                    )
                 fi
 
                 if [ "${BUILD_LLVM}" == "0" ] ; then
@@ -2129,8 +2195,11 @@ for host in "${ALL_HOSTS[@]}"; do
                 build_targets=(
                     all
                     "${SWIFT_STDLIB_TARGETS[@]}"
-                    "${SWIFT_LIBEXEC_TARGETS[@]}"
                 )
+                if [[ "${product}" != "swift_stage1" ]]; then
+                    build_targets=("${build_targets[@]}"
+                                   "${SWIFT_LIBEXEC_TARGETS[@]}")
+                fi
                 if [[ $(true_false "${build_perf_testsuite_this_time}") == "TRUE" ]]; then
                     native_swift_tools_path="$(build_directory_bin ${LOCAL_HOST} swift)"
                     cmake_options=(
@@ -2728,6 +2797,9 @@ for host in "${ALL_HOSTS[@]}"; do
             libcxx)
                 continue # We don't test libc++
                 ;;
+            swift_stage1)
+                continue # Only the final stage of a two-stage build is tested
+                ;;
             swift)
                 executable_target=
                 results_targets=
@@ -2974,6 +3046,9 @@ for host in "${ALL_HOSTS[@]}"; do
                     continue
                 fi
                 INSTALL_TARGETS=install-cxx-headers
+                ;;
+            swift_stage1)
+                continue # Only the final stage of a two-stage build is installed
                 ;;
             swift)
                 if [[ -z "${INSTALL_SWIFT}" ]] ; then
