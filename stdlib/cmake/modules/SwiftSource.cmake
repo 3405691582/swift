@@ -13,7 +13,7 @@ endfunction()
 # Compute the library subdirectory to use for the given sdk and
 # architecture, placing the result in 'result_var_name'.
 function(compute_library_subdir result_var_name sdk arch)
-  set("${result_var_name}" "${SWIFT_SDK_${sdk}_LIB_SUBDIR}" PARENT_SCOPE)
+  set("${result_var_name}" "${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}" PARENT_SCOPE)
 endfunction()
 
 # Return a swiftc flag (e.g. -O or -Onone) to control optimization level based

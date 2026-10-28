@@ -8,11 +8,31 @@ set(SWIFT_CONFIGURED_SDKS)
 include(SwiftWindowsSupport)
 include(SwiftAndroidSupport)
 
+# Compute SWIFT_SDK_${prefix}_RUNTIME_LIB_SUBDIR from SWIFT_SDK_${prefix}_LIB_SUBDIR.
+#
+# LIB_SUBDIR is the bare platform name. It is used as a component of target
+# names (e.g. swiftCore-openbsd-x86_64), of libexec/swift/<platform> and of
+# the SWIFT_LIB_SUBDIR runtime define. RUNTIME_LIB_SUBDIR is the directory
+# under lib/swift and lib/swift_static that actually holds the runtime
+# libraries, modules, swiftrt.o and friends. The two are the same except on
+# platforms that nest the platform directory under the Swift version, so that
+# the runtimes of several toolchain versions can coexist and be told apart by
+# path rather than by (versioned) file name. The compiler mirrors this in
+# swift::getRuntimeLibrarySubdirForTriple(); keep the two in sync.
+macro(_swift_configure_sdk_runtime_lib_subdir prefix)
+  if("${prefix}" STREQUAL "OPENBSD")
+    set(SWIFT_SDK_${prefix}_RUNTIME_LIB_SUBDIR
+        "${SWIFT_SDK_${prefix}_LIB_SUBDIR}/${SWIFT_VERSION_MAJOR}.${SWIFT_VERSION_MINOR}")
+  else()
+    set(SWIFT_SDK_${prefix}_RUNTIME_LIB_SUBDIR "${SWIFT_SDK_${prefix}_LIB_SUBDIR}")
+  endif()
+endmacro()
+
 # Report the given SDK to the user.
 function(_report_sdk prefix)
   message(STATUS "${SWIFT_SDK_${prefix}_NAME} SDK:")
   message(STATUS "  Object File Format: ${SWIFT_SDK_${prefix}_OBJECT_FORMAT}")
-  message(STATUS "  Swift Standard Library Path: ${SWIFT_SDK_${prefix}_LIB_SUBDIR}")
+  message(STATUS "  Swift Standard Library Path: ${SWIFT_SDK_${prefix}_RUNTIME_LIB_SUBDIR}")
   message(STATUS "  Threading Package: ${SWIFT_SDK_${prefix}_THREADING_PACKAGE}")
 
   message(STATUS "  Static linking supported: ${SWIFT_SDK_${prefix}_STATIC_LINKING_SUPPORTED}")
@@ -153,6 +173,10 @@ endfunction()
 #   SWIFT_SDK_${prefix}_BUILD_NUMBER              SDK build number (e.g., 14A389a)
 #   SWIFT_SDK_${prefix}_DEPLOYMENT_VERSION        Deployment version (e.g., 10.9, 7.0)
 #   SWIFT_SDK_${prefix}_LIB_SUBDIR                Library subdir for this SDK
+#   SWIFT_SDK_${prefix}_RUNTIME_LIB_SUBDIR        Subdir of lib/swift[_static] holding
+#                                                 the runtime libraries and modules
+#                                                 (LIB_SUBDIR, possibly nested under
+#                                                 the Swift version)
 #   SWIFT_SDK_${prefix}_TRIPLE_NAME               Triple name for this SDK
 #   SWIFT_SDK_${prefix}_OBJECT_FORMAT             The object file format (e.g. MACHO)
 #   SWIFT_SDK_${prefix}_USE_ISYSROOT              Whether to use -isysroot
@@ -209,6 +233,7 @@ macro(configure_sdk_darwin
     set(SWIFT_SDK_${prefix}_TEST_DEPLOYMENT_VERSION "${deployment_version}")
   endif()
   set(SWIFT_SDK_${prefix}_LIB_SUBDIR "${xcrun_name}")
+  _swift_configure_sdk_runtime_lib_subdir(${prefix})
   set(SWIFT_SDK_${prefix}_TRIPLE_NAME "${triple_name}")
   set(SWIFT_SDK_${prefix}_AVAILABILITY_NAME "${availability_name}")
   set(SWIFT_SDK_${prefix}_OBJECT_FORMAT "MACHO")
@@ -282,6 +307,7 @@ macro(configure_sdk_darwin
       # For macCatalyst, the xcrun_name is "macosx" since it uses that sdk.
       # Hard code the library subdirectory to "maccatalyst" in that case.
       set(SWIFT_SDK_MACCATALYST_LIB_SUBDIR "maccatalyst")
+      _swift_configure_sdk_runtime_lib_subdir(MACCATALYST)
     endif()
   endforeach()
 
@@ -301,6 +327,7 @@ macro(configure_sdk_unix name architectures)
 
   set(SWIFT_SDK_${prefix}_NAME "${name}")
   set(SWIFT_SDK_${prefix}_LIB_SUBDIR "${platform}")
+  _swift_configure_sdk_runtime_lib_subdir(${prefix})
   set(SWIFT_SDK_${prefix}_ARCHITECTURES "${architectures}")
   if("${prefix}" STREQUAL "CYGWIN")
     set(SWIFT_SDK_${prefix}_OBJECT_FORMAT "COFF")
@@ -512,6 +539,7 @@ macro(configure_sdk_windows name environment architectures)
 
   set(SWIFT_SDK_${prefix}_NAME "${name}")
   set(SWIFT_SDK_${prefix}_LIB_SUBDIR "windows")
+  _swift_configure_sdk_runtime_lib_subdir(${prefix})
   set(SWIFT_SDK_${prefix}_ARCHITECTURES "${architectures}")
   set(SWIFT_SDK_${prefix}_OBJECT_FORMAT "COFF")
   set(SWIFT_SDK_${prefix}_USE_ISYSROOT FALSE)
@@ -582,7 +610,7 @@ function(configure_target_variant prefix name sdk build_config lib_subdir)
   set(SWIFT_VARIANT_${prefix}_VERSION               ${SWIFT_SDK_${sdk}_VERSION})
   set(SWIFT_VARIANT_${prefix}_BUILD_NUMBER          ${SWIFT_SDK_${sdk}_BUILD_NUMBER})
   set(SWIFT_VARIANT_${prefix}_DEPLOYMENT_VERSION    ${SWIFT_SDK_${sdk}_DEPLOYMENT_VERSION})
-  set(SWIFT_VARIANT_${prefix}_LIB_SUBDIR            "${lib_subdir}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+  set(SWIFT_VARIANT_${prefix}_LIB_SUBDIR            "${lib_subdir}/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
   set(SWIFT_VARIANT_${prefix}_TRIPLE_NAME           ${SWIFT_SDK_${sdk}_TRIPLE_NAME})
   set(SWIFT_VARIANT_${prefix}_ARCHITECTURES         ${SWIFT_SDK_${sdk}_ARCHITECTURES})
   set(SWIFT_VARIANT_${prefix}_SHARED_LIBRARY_PREFIX ${SWIFT_SDK_${sdk}_SHARED_LIBRARY_PREFIX})

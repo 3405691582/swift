@@ -142,6 +142,12 @@ void printTripleInfo(const CompilerInvocation &invocation,
   out << "\",\n";
 
   out << "    \"platform\": \"" << getPlatformNameForTriple(triple) << "\",\n";
+  // The subdirectory of the resource directory holding this platform's
+  // runtime libraries and modules. Usually the same as "platform", but some
+  // platforms nest it under the Swift version (e.g. "openbsd/6.4").
+  out << "    \"librarySubdir\": \"";
+  writeEscaped(getRuntimeLibrarySubdirForTriple(triple), out);
+  out << "\",\n";
   out << "    \"arch\": \"" << swift::getMajorArchitectureName(triple)
       << "\",\n";
 

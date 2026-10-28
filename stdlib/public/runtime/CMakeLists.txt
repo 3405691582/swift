@@ -124,8 +124,9 @@ foreach(sdk ${SWIFT_SDKS})
   endif()
 
   if(SWIFT_BUILD_STATIC_STDLIB OR SWIFT_SDK_${sdk}_STATIC_ONLY)
-    set(lib_dir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
-    set(static_binary_lnk_src "${SWIFT_SOURCE_DIR}/stdlib/public/Resources/${lib_dir}/static-executable-args.lnk")
+    set(platform_dir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+    set(lib_dir "${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
+    set(static_binary_lnk_src "${SWIFT_SOURCE_DIR}/stdlib/public/Resources/${platform_dir}/static-executable-args.lnk")
 
     # Generate the static-executable-args.lnk file used for ELF systems (eg linux)
     set(linkfile "${lib_dir}/static-executable-args.lnk")
@@ -215,7 +216,7 @@ add_swift_target_library(swiftImageRegistrationObjectWASM
 
 foreach(sdk ${SWIFT_SDKS})
   foreach(arch ${SWIFT_SDK_${sdk}_ARCHITECTURES})
-    set(arch_subdir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}/${arch}")
+    set(arch_subdir "${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}/${arch}")
     set(arch_suffix "${SWIFT_SDK_${sdk}_LIB_SUBDIR}-${arch}")
 
     if("${SWIFT_SDK_${sdk}_OBJECT_FORMAT}" STREQUAL "ELF" OR
@@ -276,8 +277,9 @@ foreach(sdk ${SWIFT_SDKS})
   # Generate the static-stdlib-args.lnk file used by -static-stdlib option for
   # 'GenericUnix' (eg linux)
   if(SWIFT_SDK_${sdk}_OBJECT_FORMAT STREQUAL "ELF")
-    set(lib_dir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
-    set(static_stdlib_lnk_src "${SWIFT_SOURCE_DIR}/stdlib/public/Resources/${lib_dir}/static-stdlib-args.lnk")
+    set(platform_dir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+    set(lib_dir "${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
+    set(static_stdlib_lnk_src "${SWIFT_SOURCE_DIR}/stdlib/public/Resources/${platform_dir}/static-stdlib-args.lnk")
     set(linkfile ${lib_dir}/static-stdlib-args.lnk)
     if(EXISTS "${static_stdlib_lnk_src}")
       add_custom_command_target(swift_static_stdlib_${sdk}_args

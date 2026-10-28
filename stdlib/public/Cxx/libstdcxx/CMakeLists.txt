@@ -4,8 +4,8 @@ foreach(sdk ${SWIFT_SDKS})
     continue()
   endif()
 
-  set(module_dir "${SWIFTLIB_DIR}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
-  set(module_dir_static "${SWIFTSTATICLIB_DIR}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+  set(module_dir "${SWIFTLIB_DIR}/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
+  set(module_dir_static "${SWIFTSTATICLIB_DIR}/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
 
   set(libstdcxx_header "libstdcxx.h")
   set(libstdcxx_header_out "${module_dir}/libstdcxx.h")
@@ -67,18 +67,18 @@ foreach(sdk ${SWIFT_SDKS})
   endif()
 
   swift_install_in_component(FILES "${libstdcxx_modulemap_out}"
-      DESTINATION "lib/swift/${SWIFT_SDK_${sdk}_LIB_SUBDIR}"
+      DESTINATION "lib/swift/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}"
       COMPONENT sdk-overlay)
   swift_install_in_component(FILES "${libstdcxx_header_out}"
-      DESTINATION "lib/swift/${SWIFT_SDK_${sdk}_LIB_SUBDIR}"
+      DESTINATION "lib/swift/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}"
       COMPONENT sdk-overlay)
 
   if(SWIFT_BUILD_STATIC_STDLIB OR SWIFT_SDK_${sdk}_STATIC_ONLY)
     swift_install_in_component(FILES "${libstdcxx_modulemap_out_static}"
-        DESTINATION "lib/swift_static/${SWIFT_SDK_${sdk}_LIB_SUBDIR}"
+        DESTINATION "lib/swift_static/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}"
         COMPONENT sdk-overlay)
     swift_install_in_component(FILES "${libstdcxx_header_out_static}"
-        DESTINATION "lib/swift_static/${SWIFT_SDK_${sdk}_LIB_SUBDIR}"
+        DESTINATION "lib/swift_static/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}"
         COMPONENT sdk-overlay)
   endif()
 

@@ -303,7 +303,7 @@ function(setup_lit_args ARGS_VAR_OUT tested_sdk test_results_dir resource_dir_ov
 
   if(NOT SWIFT_BUILD_STDLIB AND NOT SWIFT_PATH_TO_EXTERNAL_STDLIB_BUILD)
     list(APPEND swift_lit_args_result
-        "--param" "test_sdk_overlay_dir=${SWIFTLIB_DIR}/${SWIFT_SDK_${tested_sdk}_LIB_SUBDIR}")
+        "--param" "test_sdk_overlay_dir=${SWIFTLIB_DIR}/${SWIFT_SDK_${tested_sdk}_RUNTIME_LIB_SUBDIR}")
   endif()
 
 

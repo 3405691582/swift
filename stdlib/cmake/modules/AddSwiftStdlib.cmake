@@ -956,6 +956,7 @@ function(add_swift_target_library_single target name)
   # functions invoked from it.
   if("${SWIFTLIB_SINGLE_SDK}" STREQUAL "embedded")
     set(SWIFT_SDK_embedded_LIB_SUBDIR "embedded")
+    set(SWIFT_SDK_embedded_RUNTIME_LIB_SUBDIR "embedded")
     set(SWIFT_ENABLE_REFLECTION OFF)
     set(SWIFT_STDLIB_SUPPORT_BACK_DEPLOYMENT OFF)
     set(SWIFT_STDLIB_STABLE_ABI OFF)
@@ -1011,12 +1012,12 @@ function(add_swift_target_library_single target name)
 
   # Determine the subdirectory where this library will be installed.
   set(SWIFTLIB_SINGLE_SUBDIR
-      "${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_LIB_SUBDIR}/${SWIFTLIB_SINGLE_ARCHITECTURE_SUBDIR_NAME}")
+      "${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_RUNTIME_LIB_SUBDIR}/${SWIFTLIB_SINGLE_ARCHITECTURE_SUBDIR_NAME}")
 
   # macCatalyst ios-like builds are installed in the maccatalyst/x86_64 directory
   if(maccatalyst_build_flavor STREQUAL "ios-like")
     set(SWIFTLIB_SINGLE_SUBDIR
-        "${SWIFT_SDK_MACCATALYST_LIB_SUBDIR}/${SWIFTLIB_SINGLE_ARCHITECTURE_SUBDIR_NAME}")
+        "${SWIFT_SDK_MACCATALYST_RUNTIME_LIB_SUBDIR}/${SWIFTLIB_SINGLE_ARCHITECTURE_SUBDIR_NAME}")
   endif()
 
   if ("${SWIFTLIB_SINGLE_BOOTSTRAPPING}" STREQUAL "")
@@ -1025,7 +1026,7 @@ function(add_swift_target_library_single target name)
     # In the bootstrapping builds, we only have the single host architecture.
     # So generated the library directly in the parent SDK specific directory
     # (avoiding to lipo/copy the library).
-    set(output_sub_dir ${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_LIB_SUBDIR})
+    set(output_sub_dir ${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_RUNTIME_LIB_SUBDIR})
   endif()
 
   # Include LLVM Bitcode slices for iOS, Watch OS, and Apple TV OS device libraries.
@@ -1659,11 +1660,11 @@ function(add_swift_target_library_single target name)
       ${SWIFTLIB_SINGLE_C_COMPILE_FLAGS}  "-DSWIFT_TARGET_LIBRARY_NAME=${name}")
   set(link_flags ${SWIFTLIB_SINGLE_LINK_FLAGS})
 
-  set(library_search_subdir "${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_LIB_SUBDIR}")
+  set(library_search_subdir "${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_RUNTIME_LIB_SUBDIR}")
   set(library_search_directories
       "${lib_dir}/${output_sub_dir}"
       "${SWIFT_NATIVE_SWIFT_TOOLS_PATH}/../lib/swift/${SWIFTLIB_SINGLE_SUBDIR}"
-      "${SWIFT_NATIVE_SWIFT_TOOLS_PATH}/../lib/swift/${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_LIB_SUBDIR}")
+      "${SWIFT_NATIVE_SWIFT_TOOLS_PATH}/../lib/swift/${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_RUNTIME_LIB_SUBDIR}")
 
   # In certain cases when building, the environment variable SDKROOT is set to override
   # where the sdk root is located in the system. If that environment variable has been
@@ -1905,7 +1906,7 @@ function(add_swift_target_library_single target name)
     set(library_search_directories
         "${search_base_dir}/${SWIFTLIB_SINGLE_SUBDIR}"
         "${SWIFT_NATIVE_SWIFT_TOOLS_PATH}/../lib/swift/${SWIFTLIB_SINGLE_SUBDIR}"
-        "${SWIFT_NATIVE_SWIFT_TOOLS_PATH}/../lib/swift/${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_LIB_SUBDIR}")
+        "${SWIFT_NATIVE_SWIFT_TOOLS_PATH}/../lib/swift/${SWIFT_SDK_${SWIFTLIB_SINGLE_SDK}_RUNTIME_LIB_SUBDIR}")
     target_link_directories(${target_static} PRIVATE
       ${library_search_directories})
 
@@ -2882,9 +2883,13 @@ function(add_swift_target_library name)
       return()
     endif()
 
+    # library_subdir names the platform (for target names); library_path_subdir
+    # is the directory under lib/swift[_static] the library goes into.
     set(library_subdir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+    set(library_path_subdir "${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
     if(maccatalyst_build_flavor STREQUAL "ios-like")
       set(library_subdir "${SWIFT_SDK_MACCATALYST_LIB_SUBDIR}")
+      set(library_path_subdir "${SWIFT_SDK_MACCATALYST_RUNTIME_LIB_SUBDIR}")
     endif()
 
     if(NOT SWIFTLIB_OBJECT_LIBRARY)
@@ -2892,13 +2897,13 @@ function(add_swift_target_library name)
       if(SWIFTLIB_SHARED AND NOT SWIFT_SDK_${sdk}_STATIC_ONLY)
         if("${sdk}" STREQUAL "WINDOWS")
           set(UNIVERSAL_LIBRARY_NAME
-            "${SWIFTLIB_DIR}/${library_subdir}/${name}.dll")
+            "${SWIFTLIB_DIR}/${library_path_subdir}/${name}.dll")
         elseif(SWIFTLIB_BACK_DEPLOYMENT_LIBRARY)
           set(UNIVERSAL_LIBRARY_NAME
-            "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/swift-${SWIFTLIB_BACK_DEPLOYMENT_LIBRARY}/${library_subdir}/${CMAKE_SHARED_LIBRARY_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+            "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/swift-${SWIFTLIB_BACK_DEPLOYMENT_LIBRARY}/${library_path_subdir}/${CMAKE_SHARED_LIBRARY_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
         else()
           set(UNIVERSAL_LIBRARY_NAME
-            "${SWIFTLIB_DIR}/${library_subdir}/${CMAKE_SHARED_LIBRARY_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+            "${SWIFTLIB_DIR}/${library_path_subdir}/${CMAKE_SHARED_LIBRARY_PREFIX}${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
         endif()
       else()
         if(SWIFT_SDK_${sdk}_STATIC_ONLY)
@@ -2909,10 +2914,10 @@ function(add_swift_target_library name)
 
         if("${sdk}" STREQUAL "WINDOWS")
           set(UNIVERSAL_LIBRARY_NAME
-            "${lib_dir}/${library_subdir}/${name}.lib")
+            "${lib_dir}/${library_path_subdir}/${name}.lib")
         else()
           set(UNIVERSAL_LIBRARY_NAME
-            "${lib_dir}/${library_subdir}/${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+            "${lib_dir}/${library_path_subdir}/${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
         endif()
       endif()
 
@@ -2937,9 +2942,9 @@ function(add_swift_target_library name)
         CACHE INTERNAL "UNIVERSAL_LIBRARY_NAMES_${library_subdir}")
 
       # Determine the subdirectory where this library will be installed.
-      set(resource_dir_sdk_subdir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+      set(resource_dir_sdk_subdir "${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
       if(maccatalyst_build_flavor STREQUAL "ios-like")
-        set(resource_dir_sdk_subdir "${SWIFT_SDK_MACCATALYST_LIB_SUBDIR}")
+        set(resource_dir_sdk_subdir "${SWIFT_SDK_MACCATALYST_RUNTIME_LIB_SUBDIR}")
       endif()
 
       precondition(resource_dir_sdk_subdir)
@@ -3062,7 +3067,7 @@ function(add_swift_target_library name)
         set(lipo_target_static
             "${name}-${library_subdir}-static")
         set(UNIVERSAL_LIBRARY_NAME
-            "${universal_subdir}/${library_subdir}/${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+            "${universal_subdir}/${library_path_subdir}/${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
         _add_swift_lipo_target(SDK
                                  ${sdk}
                                TARGET
@@ -3157,7 +3162,7 @@ function(_add_swift_target_executable_single name)
 
   # Prepare linker search directories.
   set(library_search_directories
-        "${SWIFTLIB_DIR}/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_LIB_SUBDIR}")
+        "${SWIFTLIB_DIR}/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_RUNTIME_LIB_SUBDIR}")
 
   # Add variant-specific flags.
   _add_target_variant_c_compile_flags(
@@ -3291,11 +3296,11 @@ function(_add_swift_target_executable_single name)
   if(SWIFTEXE_SINGLE_SDK IN_LIST SWIFT_DARWIN_PLATFORMS)
     set_target_properties(${name} PROPERTIES
       BUILD_WITH_INSTALL_RPATH YES
-      INSTALL_RPATH "@executable_path/../lib/swift/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_LIB_SUBDIR};@executable_path/../../../lib/swift/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_LIB_SUBDIR}")
+      INSTALL_RPATH "@executable_path/../lib/swift/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_RUNTIME_LIB_SUBDIR};@executable_path/../../../lib/swift/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_RUNTIME_LIB_SUBDIR}")
   elseif(SWIFT_HOST_VARIANT_SDK STREQUAL "LINUX")
     set_target_properties(${name} PROPERTIES
       BUILD_WITH_INSTALL_RPATH YES
-      INSTALL_RPATH "$ORIGIN/../../../lib/swift/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_LIB_SUBDIR}")
+      INSTALL_RPATH "$ORIGIN/../../../lib/swift/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_RUNTIME_LIB_SUBDIR}")
   endif()
   set_output_directory(${name}
       BINARY_DIR ${SWIFT_RUNTIME_OUTPUT_INTDIR}

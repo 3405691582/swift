@@ -31,11 +31,11 @@ static std::optional<Path> getActualModuleMapPath(
     StringRef name, SearchPathOptions &Opts, const LangOptions &LangOpts,
     const llvm::Triple &triple, bool isArchSpecific,
     const llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> &vfs) {
-  StringRef platform;
+  std::string platform;
   if (swift::tripleIsMacCatalystEnvironment(triple))
     platform = "macosx";
   else
-    platform = swift::getPlatformNameForTriple(triple);
+    platform = swift::getRuntimeLibrarySubdirForTriple(triple);
 
   if (LangOpts.hasFeature(Feature::Embedded))
     platform = "embedded";

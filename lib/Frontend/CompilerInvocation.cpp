@@ -111,13 +111,13 @@ std::string CompilerInvocation::computePrebuiltCachePath(
     StringRef RuntimeResourcePath, llvm::Triple target,
     std::optional<llvm::VersionTuple> sdkVer) {
   SmallString<64> defaultPrebuiltPath{RuntimeResourcePath};
-  StringRef platform;
+  std::string platform;
   if (tripleIsMacCatalystEnvironment(target)) {
     // The prebuilt cache for macCatalyst is the same as the one for macOS, not
     // iOS or a separate location of its own.
     platform = "macosx";
   } else {
-    platform = getPlatformNameForTriple(target);
+    platform = getRuntimeLibrarySubdirForTriple(target);
   }
   llvm::sys::path::append(defaultPrebuiltPath, platform, "prebuilt-modules");
 
@@ -209,7 +209,7 @@ updateRuntimeLibraryPaths(SearchPathOptions &SearchPathOpts,
   const llvm::Triple &Triple = LangOpts.Target;
   llvm::SmallString<128> LibPath(SearchPathOpts.RuntimeResourcePath);
 
-  StringRef LibSubDir = getPlatformNameForTriple(Triple);
+  std::string LibSubDir = getRuntimeLibrarySubdirForTriple(Triple);
   if (tripleIsMacCatalystEnvironment(Triple))
     LibSubDir = "maccatalyst";
   if (LangOpts.hasFeature(Feature::Embedded))
@@ -289,7 +289,7 @@ updateRuntimeLibraryPaths(SearchPathOptions &SearchPathOpts,
     if (!Triple.isOSDarwin()) {
       // Use the non-architecture suffixed form with directory-layout
       // swiftmodules.
-      llvm::sys::path::append(LibPath, getPlatformNameForTriple(Triple));
+      llvm::sys::path::append(LibPath, getRuntimeLibrarySubdirForTriple(Triple));
       RuntimeLibraryImportPaths.push_back(std::string(LibPath.str()));
 
       // Compatibility with older releases - use the architecture suffixed form

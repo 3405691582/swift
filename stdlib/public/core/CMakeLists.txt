@@ -514,7 +514,7 @@ add_swift_target_library(swiftCore
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   foreach(sdk ${SWIFT_SDKS})
     set(lib_dir "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
-    set(lib_path "${SWIFTLIB_DIR}/${lib_dir}")
+    set(lib_path "${SWIFTLIB_DIR}/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
 
     # This doesn't depend on libswiftCore.dylib because we don't actually need
     # for it to exist to create the symlink, nor is there any need to recreate

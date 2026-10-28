@@ -86,6 +86,24 @@ namespace swift {
   /// returned.
   StringRef getPlatformNameForTriple(const llvm::Triple &triple);
 
+  /// Returns the subdirectory of the Swift resource directory (`lib/swift` or
+  /// `lib/swift_static`) that holds the runtime libraries, modules and other
+  /// per-platform resources for the given target triple.
+  ///
+  /// For most platforms this is just \c getPlatformNameForTriple. Platforms
+  /// that embed the toolchain version into their library layout, so that the
+  /// runtimes of several toolchain versions can coexist and be told apart by
+  /// path rather than by file name, nest the platform directory under the
+  /// Swift version, e.g. "openbsd/6.4".
+  ///
+  /// If the triple does not correspond to a known platform, the empty string
+  /// is returned.
+  std::string getRuntimeLibrarySubdirForTriple(const llvm::Triple &triple);
+
+  /// Returns whether the given platform nests its runtime library directory
+  /// under the Swift version (see \c getRuntimeLibrarySubdirForTriple).
+  bool platformUsesVersionedRuntimeLibrarySubdir(const llvm::Triple &triple);
+
   /// Returns the version tuple for a given target triple
   llvm::VersionTuple getVersionForTriple(const llvm::Triple &triple);
 

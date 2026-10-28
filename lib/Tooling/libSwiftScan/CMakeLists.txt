@@ -47,7 +47,7 @@ if(SWIFT_HOST_VARIANT_SDK MATCHES "LINUX|ANDROID|OPENBSD|FREEBSD" AND BOOTSTRAPP
   # FIXME: Build this library into 'lib/swift/host/' instead of 'lib/'
   set_property(
     TARGET libSwiftScan
-    APPEND PROPERTY INSTALL_RPATH "$ORIGIN/../${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}"
+    APPEND PROPERTY INSTALL_RPATH "$ORIGIN/../${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_RUNTIME_LIB_SUBDIR}"
   )
 endif()
 
@@ -84,8 +84,8 @@ add_dependencies(compiler libSwiftScan)
 
 if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
 swift_install_in_component(TARGETS libSwiftScan
-  ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}" COMPONENT compiler
-  LIBRARY DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}" COMPONENT compiler
+  ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_RUNTIME_LIB_SUBDIR}" COMPONENT compiler
+  LIBRARY DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_RUNTIME_LIB_SUBDIR}" COMPONENT compiler
   RUNTIME DESTINATION "bin" COMPONENT compiler)
 else()
   # On other platforms, instead install the library into 'lib/swift/host/compiler' and symlink to it from its legacy location 'lib/swift/host'

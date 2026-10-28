@@ -98,7 +98,7 @@ function(get_bootstrapping_swift_lib_dir bs_lib_dir bootstrapping)
   set(bs_lib_dir "")
   if(BOOTSTRAPPING_MODE STREQUAL "BOOTSTRAPPING")
     set(lib_dir
-        "${SWIFTLIB_DIR}/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+        "${SWIFTLIB_DIR}/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_RUNTIME_LIB_SUBDIR}")
     # If building the stdlib with bootstrapping, the compiler has to pick up
     # the swift libraries of the previous bootstrapping level (because in the
     # current lib-directory they are not built yet.
@@ -128,7 +128,7 @@ function(get_bootstrapping_swift_lib_dir bs_lib_dir bootstrapping)
         set(swift_dir "${swiftly_dir}/usr")
       endif()
 
-      set(bs_lib_dir "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_LIB_SUBDIR}")
+      set(bs_lib_dir "${swift_dir}/lib/swift/${SWIFT_SDK_${SWIFT_HOST_VARIANT_SDK}_RUNTIME_LIB_SUBDIR}")
     endif()
   endif()
   set(bs_lib_dir ${bs_lib_dir} PARENT_SCOPE)

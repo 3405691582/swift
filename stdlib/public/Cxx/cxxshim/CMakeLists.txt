@@ -1,7 +1,7 @@
 set(libcxxshim_modulemap_target_list)
 foreach(sdk ${SWIFT_SDKS})
-  set(module_dir "${SWIFTLIB_DIR}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
-  set(module_dir_static "${SWIFTSTATICLIB_DIR}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+  set(module_dir "${SWIFTLIB_DIR}/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
+  set(module_dir_static "${SWIFTSTATICLIB_DIR}/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
 
   add_custom_command(OUTPUT ${module_dir}
                      COMMAND ${CMAKE_COMMAND} "-E" "make_directory" "${module_dir}")
@@ -10,7 +10,7 @@ foreach(sdk ${SWIFT_SDKS})
                        COMMAND ${CMAKE_COMMAND} "-E" "make_directory" "${module_dir_static}")
   endif()
   if(SWIFT_ENABLE_MACCATALYST AND "${sdk}" STREQUAL "OSX")
-    set(maccatalyst_module_dir "${SWIFTLIB_DIR}/${SWIFT_SDK_MACCATALYST_LIB_SUBDIR}")
+    set(maccatalyst_module_dir "${SWIFTLIB_DIR}/${SWIFT_SDK_MACCATALYST_RUNTIME_LIB_SUBDIR}")
     add_custom_command(OUTPUT ${maccatalyst_module_dir}
                        COMMAND ${CMAKE_COMMAND} "-E" "make_directory" "${maccatalyst_module_dir}")
   endif()
@@ -53,16 +53,16 @@ foreach(sdk ${SWIFT_SDKS})
 
 
   swift_install_in_component(FILES libcxxshim.modulemap libcxxshim.h libcxxstdlibshim.h
-                             DESTINATION "lib/swift/${SWIFT_SDK_${sdk}_LIB_SUBDIR}"
+                             DESTINATION "lib/swift/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}"
                              COMPONENT compiler)
   if(SWIFT_BUILD_STATIC_STDLIB OR SWIFT_SDK_${sdk}_STATIC_ONLY)
     swift_install_in_component(FILES libcxxshim.modulemap libcxxshim.h libcxxstdlibshim.h
-                               DESTINATION "lib/swift_static/${SWIFT_SDK_${sdk}_LIB_SUBDIR}"
+                               DESTINATION "lib/swift_static/${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}"
                                COMPONENT compiler)
   endif()
   if(SWIFT_ENABLE_MACCATALYST AND "${sdk}" STREQUAL "OSX")
     swift_install_in_component(FILES libcxxshim.modulemap libcxxshim.h libcxxstdlibshim.h
-                               DESTINATION "lib/swift/${SWIFT_SDK_MACCATALYST_LIB_SUBDIR}"
+                               DESTINATION "lib/swift/${SWIFT_SDK_MACCATALYST_RUNTIME_LIB_SUBDIR}"
                                COMPONENT compiler)
   endif()
 endforeach()

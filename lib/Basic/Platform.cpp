@@ -12,6 +12,7 @@
 
 #include "swift/Basic/Pack.h"
 #include "swift/Basic/Platform.h"
+#include "swift/Basic/Version.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Triple.h"
@@ -305,6 +306,29 @@ StringRef swift::getPlatformNameForTriple(const llvm::Triple &triple) {
     llvm_unreachable("unsupported OS");
   }
   llvm_unreachable("unsupported OS");
+}
+
+bool swift::platformUsesVersionedRuntimeLibrarySubdir(
+    const llvm::Triple &triple) {
+  // OpenBSD distinguishes the runtimes of different toolchain versions by
+  // directory rather than by versioned file names, so that binaries built by
+  // one toolchain (e.g. the host toolchain used to build this compiler) keep
+  // working against the libraries of another via RPATH alone.
+  return triple.isOSOpenBSD();
+}
+
+std::string
+swift::getRuntimeLibrarySubdirForTriple(const llvm::Triple &triple) {
+  std::string subdir = getPlatformNameForTriple(triple).str();
+  if (subdir.empty() || !platformUsesVersionedRuntimeLibrarySubdir(triple))
+    return subdir;
+
+  auto numericVersion = version::getSwiftNumericVersion();
+  subdir += "/";
+  subdir += std::to_string(numericVersion.first);
+  subdir += ".";
+  subdir += std::to_string(numericVersion.second);
+  return subdir;
 }
 
 llvm::VersionTuple swift::getVersionForTriple(const llvm::Triple &triple) {

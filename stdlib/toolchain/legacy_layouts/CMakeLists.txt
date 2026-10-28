@@ -2,10 +2,11 @@ add_custom_target("copy-legacy-layouts" ALL)
 
 function(add_layout_copying sdk arch bootstrapping)
   set(platform "${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
+  set(platform_lib_subdir "${SWIFT_SDK_${sdk}_RUNTIME_LIB_SUBDIR}")
 
   set(input "${SWIFT_SOURCE_DIR}/stdlib/toolchain/legacy_layouts/${platform}/layouts-${arch}.yaml")
   get_bootstrapping_path(lib_dir ${SWIFTLIB_DIR} "${bootstrapping}")
-  set(output "${lib_dir}/${platform}/layouts-${arch}.yaml")
+  set(output "${lib_dir}/${platform_lib_subdir}/layouts-${arch}.yaml")
 
   if(NOT "${bootstrapping}" STREQUAL "")
     set(target_suffix "-bootstrapping${bootstrapping}")
@@ -36,7 +37,7 @@ function(add_layout_copying sdk arch bootstrapping)
 
     swift_install_in_component(
       FILES "${input}"
-      DESTINATION "lib/swift/${platform}/"
+      DESTINATION "lib/swift/${platform_lib_subdir}/"
       COMPONENT compiler)
   else()
     # Add a dummy target that does nothing so we can still depend on it

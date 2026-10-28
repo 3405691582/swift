@@ -1625,8 +1625,15 @@ void ToolChain::getClangLibraryPath(const ArgList &Args,
   const llvm::Triple &T = getTriple();
 
   getResourceDirPath(LibPath, Args, /*Shared=*/true);
-  // Remove platform name.
-  llvm::sys::path::remove_filename(LibPath);
+  // Remove the platform library subdirectory appended by getResourceDirPath
+  // (which may be more than one path component, e.g. "openbsd/6.4").
+  std::string libSubDir = getRuntimeLibrarySubdirForTriple(T);
+  if (tripleIsMacCatalystEnvironment(T))
+    libSubDir = "maccatalyst";
+  for (auto it = llvm::sys::path::begin(libSubDir),
+            end = llvm::sys::path::end(libSubDir);
+       it != end; ++it)
+    llvm::sys::path::remove_filename(LibPath);
   StringRef platformName = "darwin";
   if (!T.isOSDarwin())
     platformName = T.isAndroid() ? "linux" : getPlatformNameForTriple(T);
@@ -1652,7 +1659,7 @@ void ToolChain::getResourceDirPath(SmallVectorImpl<char> &resourceDirPath,
         programPath, shared, resourceDirPath);
   }
 
-  StringRef libSubDir = getPlatformNameForTriple(getTriple());
+  std::string libSubDir = getRuntimeLibrarySubdirForTriple(getTriple());
   if (tripleIsMacCatalystEnvironment(getTriple()))
     libSubDir = "maccatalyst";
   llvm::sys::path::append(resourceDirPath, libSubDir);

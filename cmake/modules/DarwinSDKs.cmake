@@ -40,6 +40,7 @@ if(swift_build_freestanding AND (SWIFT_FREESTANDING_FLAVOR STREQUAL "apple"))
       "${SWIFT_FREESTANDING_AVAILABILITY_NAME}" "${SWIFT_FREESTANDING_ARCHS}"
       "${SWIFT_FREESTANDING_DEPLOYMENT_VERSION}")
   set(SWIFT_SDK_FREESTANDING_LIB_SUBDIR "freestanding")
+  set(SWIFT_SDK_FREESTANDING_RUNTIME_LIB_SUBDIR "freestanding")
   configure_target_variant(FREESTANDING-DA "FREESTANDING Debug+Asserts"   FREESTANDING DA "Debug+Asserts")
   configure_target_variant(FREESTANDING-RA "FREESTANDING Release+Asserts" FREESTANDING RA "Release+Asserts")
   configure_target_variant(FREESTANDING-R  "FREESTANDING Release"         FREESTANDING R  "Release")

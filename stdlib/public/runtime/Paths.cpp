@@ -191,12 +191,13 @@ _swift_getDefaultRootPath()
     //                         +-------------- ptr - 10
     ptr -= 10;
   } else {
-    // We *might* be in a <platform> or <platform>/<arch> directory, so scan
-    // backwards for that too
+    // We *might* be in a <platform>, <platform>/<arch>, or (on platforms that
+    // version their runtime library directory) <platform>/<version> or
+    // <platform>/<version>/<arch> directory, so scan backwards for that too
     bool found = false;
     const char *platform = ptr;
 
-    for (unsigned n = 0; n < 2; ++n) {
+    for (unsigned n = 0; n < 3; ++n) {
       while (platform > runtimePath && !_swift_isPathSep(*--platform));
 
       if (_swift_lookingAtLibSwift(platform, runtimePath)) {
